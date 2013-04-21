@@ -79,6 +79,8 @@ class Roster:
         return canWork
 
     def updateCounters(self, workingToday):
+        """Increment employee work/RDO counters."""  
+
         for staff in self.staffList:
             if staff in workingToday:
                 staff.daysSinceHoliday += 1
