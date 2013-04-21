@@ -1,15 +1,27 @@
 [General]
 #              M T W T F S S
 shiftsPerDay = 5 5 5 5 5 4 4
+priority = twoDaysLeave, totalLeave, shortRuns
+
+##########################################
+# Full-timers:
 
 [Cam]
-cantWorkDates = 14/5/13 to 23/5/13
 
 [Theresa]
+cantWorkDates = 6/5/13, 17/5/13 to 19/5/13, 31/5/13 to 2/6/13, 18/6/13 to 4/7/13
+
 [Elise]
+
 [Simon]
+
 [Vanessa]
+
 [Andrea]
+cantWorkDates = 7/5/13 to 13/5/13
+
+##########################################
+# Part-timers:
 
 [Gideon]
 fixedShifts = true

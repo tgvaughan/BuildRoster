@@ -55,26 +55,12 @@ class Roster:
 
             canWork.append(staff)
 
-        # Shuffle lists to remove unfairness:
+        # Shuffle list in attempt to remove unfairness:
         self.rand.shuffle(canWork)
 
-        # Sort list according to total number of holidays:
-        def cmpfunTH(x,y):
-            if x.holidaysTotal<y.holidaysTotal:
-                return 1
-            if x.holidaysTotal>y.holidaysTotal:
-                return -1
-            return 0
-        canWork.sort(cmp=cmpfunTH)
-
-        # Sort list according to number of days since holiday:
-        def cmpfunDSH(x,y):
-            if x.daysSinceHoliday>y.daysSinceHoliday:
-                return 1
-            if x.daysSinceHoliday<y.daysSinceHoliday:
-                return -1
-            return 0
-        canWork.sort(cmp=cmpfunDSH)
+        def costFunc(x):
+            return 0.01*x.daysSinceHoliday - x.twoDayHolidaysTotal - 0.1*x.holidaysTotal
+        canWork.sort(key=costFunc)
 
         return canWork
 
@@ -84,14 +70,14 @@ class Roster:
         for staff in self.staffList:
             if staff in workingToday:
                 staff.daysSinceHoliday += 1
-                staff.onHoliday = -1
+                staff.daysOnHoliday = 0
             else:
                 staff.daysSinceHoliday = 0
                 staff.holidaysTotal += 1
-                if staff.onHoliday<0:
-                    staff.onHoliday = 1
-                else:
-                    staff.onHoliday += 1
+                staff.daysOnHoliday += 1
+                if staff.daysOnHoliday==2:
+                    staff.twoDayHolidaysTotal += 1
+                
 
     def populateRoster(self):
         """Generate a roster subject to the given constraints."""
@@ -144,7 +130,7 @@ class Roster:
                 else:
                     out += '  '
 
-            out += ' | ' + str(staff.holidaysTotal) + '\n'
+            out += ' | ' + str(staff.holidaysTotal) + ' ' + str(staff.twoDayHolidaysTotal) + '\n'
 
         # Mark problem days
         out += ' '*10
@@ -205,14 +191,11 @@ class Employee:
         self.cantWorkDates = cantWorkDates
         self.fixed = fixed
 
-        self.daysSinceHoliday = 0
-        self.onHoliday = -1
-        self.holidaysTotal = 0
-
     def zeroCounters(self):
         self.daysSinceHoliday = 0
-        self.onHoliday = -1
+        self.daysOnHoliday = 0
         self.holidaysTotal = 0
+        self.twoDayHolidaysTotal = 0
 
 
 def readConstraintsFile(staff_file):
@@ -252,8 +235,6 @@ def readConstraintsFile(staff_file):
                     dates = [startDate + timedelta(i) for i in range(nDays)]
                     cantWorkDates.extend(dates)
 
-        print "{}: {}".format(staffName, cantWorkDates)
-
         staffList.append(Employee(staffName,
                                   canWorkWeekdays=canWorkWeekdays,
                                   cantWorkDates=cantWorkDates,
@@ -281,10 +262,10 @@ if __name__=='__main__':
                         help="Date of first day of roster (dd/mm/yy)")
     parser.add_argument("last_day", type=str,
                         help="Date of last day of roster (dd/mm/yy)")
-    parser.add_argument("-o","--output", metavar="file", type=FileType('w'), default=stdout,
+    parser.add_argument("-a=o","--output", metavar="file", type=FileType('w'), default=stdout,
                         help="Output file (default stdout).")
-    parser.add_argument("-c","--csv", action="store_true",
-                        help="Write output in CSV format.")
+    parser.add_argument("-c","--csv", metavar="file", type=FileType('w'),
+                        help="Name of file to write CSV-formatted output to.")
 
     # Parse arguments
     args = parser.parse_args(argv[1:])
@@ -296,7 +277,7 @@ if __name__=='__main__':
     roster = Roster(firstDay, lastDay, staffList, shiftsPerDay)
 
     # Generate output
-    if args.csv:
-        args.output.write(roster.csv())
-    else:
-        args.output.write(str(roster))
+    args.output.write(str(roster))
+    if args.csv != None:
+        args.csv.write(roster.csv())
+    
