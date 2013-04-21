@@ -255,29 +255,35 @@ def readConstraintsFile(staff_file):
 
     return staffList, shiftsPerDay
 
+
+### MAIN ###
+
 if __name__=='__main__':
 
-    parser = ArgumentParser(description="Generate roster.")
+    # Set up command-line arguments
+    parser = ArgumentParser(description="Simple employee shift roster generator.")
     parser.add_argument("constraints_file", type=FileType('r'),
                         help="Configuration file containing staff constraints.")
     parser.add_argument("first_day", type=str,
                         help="Date of first day of roster (dd/mm/yy)")
     parser.add_argument("last_day", type=str,
                         help="Date of last day of roster (dd/mm/yy)")
-    parser.add_argument("-o","--outfile", type=FileType('w'), default=stdout)
+    parser.add_argument("-o","--output", metavar="file", type=FileType('w'), default=stdout,
+                        help="Output file (default stdout).")
     parser.add_argument("-c","--csv", action="store_true",
                         help="Write output in CSV format.")
 
+    # Parse arguments
     args = parser.parse_args(argv[1:])
-
     firstDay = datetime.strptime(args.first_day, "%d/%m/%y")
     lastDay = datetime.strptime(args.last_day, "%d/%m/%y")
-
     staffList, shiftsPerDay = readConstraintsFile(args.constraints_file)
 
+    # Build roster
     roster = Roster(firstDay, lastDay, staffList, shiftsPerDay)
 
+    # Generate output
     if args.csv:
-        args.outfile.write(roster.csv())
+        args.output.write(roster.csv())
     else:
-        args.outfile.write(str(roster))
+        args.output.write(str(roster))
