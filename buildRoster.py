@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 from argparse import ArgumentParser, FileType
 from sys import argv, exit, stdout
 from random import Random
+
+from ConfigParser import ConfigParser
 
 class Roster:
     def __init__(self, startDate, endDate, staffList,
@@ -190,6 +192,10 @@ class Roster:
 
         return out
 
+    def ical(self):
+        """Generate ICAL representation of roster."""
+        return ""
+
 class Employee:
     def __init__(self, name, canWorkWeekdays=range(7), cantWorkDates=[], fixed=False):
         self.name = name
@@ -206,30 +212,70 @@ class Employee:
         self.onHoliday = -1
         self.holidaysTotal = 0
 
+
+def readConstraintsFile(staff_file):
+    """Retrieve staff constraints from staff config file."""
+
+    parser = ConfigParser()
+    parser.readfp(staff_file)
+
+    staffList = []
+    for staffName in parser.sections():
+        if staffName == "General":
+            continue
+
+        if parser.has_option(staffName, "canworkweekdays"):
+            strList = parser.get(staffName, "canworkweekdays").split()
+            canWorkWeekdays = [int(s) for s in strList]
+        else:
+            canWorkWeekdays = range(7)
+
+        if parser.has_option(staffName, "fixedShifts"):
+            fixed = parser.getboolean(staffName, "fixedShifts")
+        else:
+            fixed = False
+
+        if parser.has_option(staffName, "cantworkdates"):
+            strList = parser.get(staffName, "cantworkdates").split()
+            cantWorkDates = [datetime.strptime(s,"%d/%m/%y") for s in strList]
+        else:
+            cantWorkDates = []
+
+        staffList.append(Employee(staffName,
+                                  canWorkWeekdays=canWorkWeekdays,
+                                  cantWorkDates=cantWorkDates,
+                                  fixed=fixed))
+
+
+    if ("General" not in parser.sections()) or not parser.has_option("General", "shiftsPerDay"):
+        print "Error: Shifts per day not specified in constraints file."
+        exit(1)
+
+    shiftsPerDay = [int(s) for s in parser.get("General", "shiftsPerDay").split()]
+
+    return staffList, shiftsPerDay
+
 if __name__=='__main__':
 
     parser = ArgumentParser(description="Generate roster.")
-    parser.add_argument("outfile", type=FileType('w'), default=stdout)
-    parser.add_argument("-c","--csv", action="store_true")
+    parser.add_argument("constraints_file", type=FileType('r'),
+                        help="Configuration file containing staff constraints.")
+    parser.add_argument("first_day", type=str,
+                        help="Date of first day of roster (dd/mm/yy)")
+    parser.add_argument("last_day", type=str,
+                        help="Date of last day of roster (dd/mm/yy)")
+    parser.add_argument("-o","--outfile", type=FileType('w'), default=stdout)
+    parser.add_argument("-c","--csv", action="store_true",
+                        help="Write output in CSV format.")
 
     args = parser.parse_args(argv[1:])
 
-    staffList = [
-        Employee("cam"),
-        Employee("theresa"),
-        Employee("elise"),
-        Employee("simon"),
-        Employee("vanessa"),
-        Employee("andrea"),
-        Employee("gideon", canWorkWeekdays=[5,6], fixed=True),
-        #Employee("bryce", canWorkWeekdays=[5,6,2], fixed=True),
-        Employee("caitlin", canWorkWeekdays=[5,6,0], fixed=True)]
+    firstDay = datetime.strptime(args.first_day, "%d/%m/%y")
+    lastDay = datetime.strptime(args.last_day, "%d/%m/%y")
 
-    shiftsPerDay = [5,5,5,5,5,4,4]
+    staffList, shiftsPerDay = readConstraintsFile(args.constraints_file)
 
-    roster = Roster(date(2013,5,6), date(2013,6,30),
-                    staffList, shiftsPerDay)
-
+    roster = Roster(firstDay, lastDay, staffList, shiftsPerDay)
 
     if args.csv:
         args.outfile.write(roster.csv())
