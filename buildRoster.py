@@ -237,11 +237,22 @@ def readConstraintsFile(staff_file):
         else:
             fixed = False
 
+        cantWorkDates = []
         if parser.has_option(staffName, "cantworkdates"):
-            strList = parser.get(staffName, "cantworkdates").split()
-            cantWorkDates = [datetime.strptime(s,"%d/%m/%y") for s in strList]
-        else:
-            cantWorkDates = []
+            strList = parser.get(staffName, "cantworkdates").split(',')
+            for dateRangeStr in strList:
+                dateRange = dateRangeStr.split('to')
+                if len(dateRange) == 1:
+                    thisdate = datetime.strptime(dateRange[0].strip(), "%d/%m/%y")
+                    cantWorkDates.append(thisdate)
+                else:
+                    startDate = datetime.strptime(dateRange[0].strip(), "%d/%m/%y")
+                    endDate = datetime.strptime(dateRange[1].strip(), "%d/%m/%y")
+                    nDays = (endDate-startDate).days+1
+                    dates = [startDate + timedelta(i) for i in range(nDays)]
+                    cantWorkDates.extend(dates)
+
+        print "{}: {}".format(staffName, cantWorkDates)
 
         staffList.append(Employee(staffName,
                                   canWorkWeekdays=canWorkWeekdays,
